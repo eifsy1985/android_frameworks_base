@@ -263,6 +263,7 @@ public class GlobalActionsDialog implements DialogInterface.OnDismissListener,
     boolean mShowLockScreenCardsAndControls = false;
 
     private String[] mRebootMenuActions;
+    private boolean mPowerMenuSecure = false;
 
     @VisibleForTesting
     public enum GlobalActionsEvent implements UiEventLogger.UiEventEnum {
@@ -764,6 +765,9 @@ public class GlobalActionsDialog implements DialogInterface.OnDismissListener,
         dialog.setOnDismissListener(this);
         dialog.setOnShowListener(this);
 
+        mPowerMenuSecure = Settings.System.getIntForUser(mContext.getContentResolver(), 
+                        Settings.System.LOCKSCREEN_POWERMENU_SECURE, 0,  UserHandle.USER_CURRENT) != 0;
+
         return dialog;
     }
 
@@ -828,6 +832,18 @@ public class GlobalActionsDialog implements DialogInterface.OnDismissListener,
         dismissDialog();
     }
 
+    private boolean rebootAction(boolean safeMode, String reason) {
+        if (mPowerMenuSecure && mKeyguardStateController.isMethodSecure() && mKeyguardStateController.isShowing()) {
+              mActivityStarter.postQSRunnableDismissingKeyguard(() -> {
+                mWindowManagerFuncs.reboot(safeMode, reason);
+            });
+            return true;
+        } else {
+            mWindowManagerFuncs.reboot(safeMode, reason);
+            return true;
+        }
+    }
+
     /**
      * Implements {@link GlobalActionsPanelPlugin.Callbacks#dismissGlobalActionsMenu()}, which is
      * called when the quick access wallet requests that an intent be started (with lock screen
@@ -873,8 +889,7 @@ public class GlobalActionsDialog implements DialogInterface.OnDismissListener,
         @Override
         public boolean onLongPress() {
             if (!mUserManager.hasUserRestriction(UserManager.DISALLOW_SAFE_BOOT)) {
-                mWindowManagerFuncs.reboot(true, null);
-                return true;
+                return rebootAction(true, null);
             }
             return false;
         }
@@ -892,7 +907,13 @@ public class GlobalActionsDialog implements DialogInterface.OnDismissListener,
         @Override
         public void onPress() {
             // shutdown by making sure radio and power are handled accordingly.
-            mWindowManagerFuncs.shutdown();
+            if (mPowerMenuSecure && mKeyguardStateController.isMethodSecure() && mKeyguardStateController.isShowing()) {
+                  mActivityStarter.postQSRunnableDismissingKeyguard(() -> {
+                    mWindowManagerFuncs.shutdown();
+                });
+            } else {
+                mWindowManagerFuncs.shutdown();
+            }
         }
     }
 
@@ -984,8 +1005,7 @@ public class GlobalActionsDialog implements DialogInterface.OnDismissListener,
         @Override
         public boolean onLongPress() {
             if (!mUserManager.hasUserRestriction(UserManager.DISALLOW_SAFE_BOOT)) {
-                mWindowManagerFuncs.reboot(true, null);
-                return true;
+                return rebootAction(true, null);
             }
             return false;
         }
@@ -1002,7 +1022,7 @@ public class GlobalActionsDialog implements DialogInterface.OnDismissListener,
 
         @Override
         public void onPress() {
-            mWindowManagerFuncs.reboot(false, null);
+            rebootAction(false, null);
         }
     }
 
@@ -1023,7 +1043,7 @@ public class GlobalActionsDialog implements DialogInterface.OnDismissListener,
 
         @Override
         public void onPress() {
-            mWindowManagerFuncs.reboot(false, PowerManager.REBOOT_RECOVERY);
+            rebootAction(false, PowerManager.REBOOT_RECOVERY);
         }
     }
 
@@ -1044,7 +1064,7 @@ public class GlobalActionsDialog implements DialogInterface.OnDismissListener,
 
         @Override
         public void onPress() {
-            mWindowManagerFuncs.reboot(false, PowerManager.REBOOT_BOOTLOADER);
+            rebootAction(false, PowerManager.REBOOT_BOOTLOADER);
         }
     }
 	
@@ -1065,7 +1085,7 @@ public class GlobalActionsDialog implements DialogInterface.OnDismissListener,
 
         @Override
         public void onPress() {
-            mWindowManagerFuncs.reboot(false, PowerManager.REBOOT_FASTBOOT);
+            rebootAction(false, PowerManager.REBOOT_FASTBOOT);
         }
     }
 
