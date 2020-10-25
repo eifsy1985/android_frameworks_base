@@ -17,8 +17,6 @@
 <resources>
 
   <!-- Power menu reboot -->
-  <java-symbol type="string" name="reboot_title" />
-  <java-symbol type="string" name="reboot_confirm" />
   <java-symbol name="reboot_to_bootloader_title" type="string" />
   <java-symbol name="reboot_to_bootloader_message" type="string" />
   <java-symbol name="reboot_to_recovery_title" type="string" />
