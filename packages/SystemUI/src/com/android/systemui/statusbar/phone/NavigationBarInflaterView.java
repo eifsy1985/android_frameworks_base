@@ -100,6 +100,7 @@ public class NavigationBarInflaterView extends FrameLayout
 
     private boolean mIsVertical;
     private boolean mAlternativeOrder;
+    private boolean mUsingCustomLayout;
 
     private OverviewProxyService mOverviewProxyService;
     private int mNavBarMode = NAV_BAR_MODE_3BUTTON;
@@ -153,6 +154,7 @@ public class NavigationBarInflaterView extends FrameLayout
     @Override
     public void onNavigationModeChanged(int mode) {
         mNavBarMode = mode;
+        onLikelyDefaultLayoutChange();
     }
 
     @Override
@@ -191,7 +193,18 @@ public class NavigationBarInflaterView extends FrameLayout
         updateLayoutInversion();
     }
 
+
+    public void setNavigationBarLayout(String layoutValue) {
+        if (!Objects.equals(mCurrentLayout, layoutValue)) {
+            mUsingCustomLayout = layoutValue != null;
+            clearViews();
+            inflateLayout(layoutValue);
+        }
+    }
+
     public void onLikelyDefaultLayoutChange() {
+        // Don't override custom layouts
+        if (mUsingCustomLayout) return;
 
         // Reevaluate new layout
         final String newValue = getDefaultLayout();
